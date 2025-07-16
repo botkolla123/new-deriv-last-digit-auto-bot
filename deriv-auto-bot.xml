@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🤖 Deriv Auto Over/Under Bot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      text-align: center;
+      padding: 30px;
+    }
+    .box {
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      display: inline-block;
+    }
+    input, button {
+      padding: 10px;
+      margin: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      cursor: pointer;
+      background: #28a745;
+      color: white;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
+      color: yellow;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🔢 Deriv Last Digit Auto Bot</h1>
+
+  <div class="box">
+    <p>🔐 Enter your Deriv API Token:</p>
+    <input type="password" id="token" placeholder="Enter API Token" size="40" />
+    <br />
+    <button onclick="startBot()">▶️ Start Bot</button>
+    <p id="status">Status: Not Connected</p>
+  </div>
+
+  <script>
+    let ws;
+    let lastDigits = [];
+    const activeSymbol = "R_100"; // Can change to R_10, R_25, etc.
+
+    function startBot() {
+      const token = document.getElementById("token").value.trim();
+      const status = document.getElementById("status");
+
+      if (!token) {
+        alert("U9QLmla1mC78ICg");
+        return;
+      }
+
+      ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
+
+      ws.onopen = () => {
+        status.innerText = "🔐 Connecting to Deriv...";
+        ws.send(JSON.stringify({ authorize: token }));
+      };
+
+      ws.onmessage = (msg) => {
+        const data = JSON.parse(msg.data);
+
+        if (data.msg_type === "authorize") {
+          status.innerText = "✅ Authorized. Subscribing to ticks...";
+          ws.send(JSON.stringify({ ticks: activeSymbol, subscribe: 1 }));
+        }
+
+        if (data.msg_type === "tick") {
+          const digit = data.tick.quote.toString().slice(-1);
+          lastDigits.push(digit);
+          if (lastDigits.length > 10) lastDigits.shift();
+          detectPattern(digit);
+        }
+
+        if (data.msg_type === "buy") {
+          status.innerText = `🎯 Trade Executed: ${data.buy.contract_type} (Barrier ${data.buy.barrier})`;
+        }
+
+        if (data.error) {
+          status.innerText = `❌ Error: ${data.error.message}`;
+        }
+      };
+    }
+
+    function detectPattern(digit) {
+      const status = document.getElementById("status");
+      const len = lastDigits.length;
+
+      if (len >= 3) {
+        const d1 = lastDigits[len - 1];
+        const d2 = lastDigits[len - 2];
+        const d3 = lastDigits[len - 3];
+
+        if (d1 === d2 && d2 === d3) {
+          const repeatDigit = parseInt(d1);
+          if (repeatDigit >= 7) {
+            sendTrade("DIGITUNDER", repeatDigit);
+            status.innerText = `📉 Signal: Under ${repeatDigit} (Repeat 3 times)`;
+          } else if (repeatDigit <= 2) {
+            sendTrade("DIGITOVER", repeatDigit);
+            status.innerText = `📈 Signal: Over ${repeatDigit} (Repeat 3 times)`;
+          } else {
+            status.innerText = `⚠️ Pattern: ${d1} x3 — No trade (digit 3–6)`;
+          }
+        }
+      }
+    }
+
+    function sendTrade(type, barrierDigit) {
+      const proposal = {
+        buy: 1,
+        price: 0.35,
+        parameters: {
+          amount: 0.35,
+          basis: "stake",
+          contract_type: type,
+          currency: "USD",
+          duration: 1,
+          duration_unit: "t",
+          symbol: activeSymbol,
+          barrier: barrierDigit,
+        },
+      };
+
+      ws.send(JSON.stringify(proposal));
+    }
+  </script>
+
+</body>
+</html>
