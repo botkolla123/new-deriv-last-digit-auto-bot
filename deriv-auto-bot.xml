@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>🤖 Deriv Auto Over/Under Bot</title>
   <style>
     body {
@@ -42,8 +42,8 @@
 
   <div class="box">
     <p>🔐 Enter your Deriv API Token:</p>
-    <input type="password" id="token" placeholder="Enter API Token" size="40" />
-    <br />
+    <input type="password" id="token" placeholder="Enter API Token" size="40">
+    <br>
     <button onclick="startBot()">▶️ Start Bot</button>
     <p id="status">Status: Not Connected</p>
   </div>
@@ -58,7 +58,7 @@
       const status = document.getElementById("status");
 
       if (!token) {
-        alert("U9QLmla1mC78ICg");
+        alert("Please enter your Deriv API Token!");
         return;
       }
 
@@ -130,8 +130,8 @@
           duration: 1,
           duration_unit: "t",
           symbol: activeSymbol,
-          barrier: barrierDigit,
-        },
+          barrier: barrierDigit
+        }
       };
 
       ws.send(JSON.stringify(proposal));
